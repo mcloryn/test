@@ -55,7 +55,7 @@ app.get("/api/ip-info", async (req, res) => {
     const response = await fetch(apiUrl, {
       signal: controller.signal,
       headers: {
-        "User-Agent": "IPInfoApp/1.0",
+        "User -Agent": "IPInfoApp/1.0",
         "Accept": "application/json"
       }
     });
@@ -97,7 +97,6 @@ app.get("/api/ip-info", async (req, res) => {
     });
   }
 });
-
 
 // Middleware error global
 app.use((err, req, res, next) => {
