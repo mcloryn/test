@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>IP Information Finder</title>
+  <style>
+    /* (Style tidak diubah dari yang kamu kirim sebelumnya, hanya dipangkas agar ringkas di sini) */
+  </style>
+</head>
+<body>
+  <h1>IP Information Finder</h1>
+
+  <div class="container">
+    <button id="getIpBtn" class="button">Get My IP Information</button>
+
+    <div id="loading" class="loading">
+      <div class="spinner"></div>
+      <p>Fetching IP information...</p>
+    </div>
+
+    <div id="error" class="error">
+      <p>Failed to retrieve IP information. Please try again later.</p>
+    </div>
+
+    <div id="ipDetail" class="detail-section">
+      <div class="ip-display" id="ipAddress"></div>
+
+      <div class="card">
+        <h3>Location Information</h3>
+        <table id="locationTable">
+          <tr>
+            <th>Property</th>
+            <th>Value</th>
+          </tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3>Network Information</h3>
+        <table id="networkTable">
+          <tr>
+            <th>Property</th>
+            <th>Value</th>
+          </tr>
+        </table>
+      </div>
+
+      <div class="map-container" id="mapContainer"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>&copy; 2025 IP Information Finder. All rights reserved.</p>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const getIpBtn = document.getElementById("getIpBtn");
+      const loading = document.getElementById("loading");
+      const error = document.getElementById("error");
+      const ipDetail = document.getElementById("ipDetail");
+      const ipAddress = document.getElementById("ipAddress");
+      const locationTable = document.getElementById("locationTable");
+      const networkTable = document.getElementById("networkTable");
+      const mapContainer = document.getElementById("mapContainer");
+
+      getIpBtn.addEventListener("click", fetchIpInfo);
+
+      async function fetchIpInfo() {
+        error.style.display = "none";
+        ipDetail.style.display = "none";
+        getIpBtn.disabled = true;
+        loading.style.display = "block";
+
+        try {
+          const response = await fetch("/api/ip-info");
+          if (!response.ok) throw new Error("Network error");
+
+          const data = await response.json();
+          displayIpInfo(data);
+        } catch (err) {
+          console.error(err);
+          error.style.display = "block";
+        } finally {
+          loading.style.display = "none";
+          getIpBtn.disabled = false;
+        }
+      }
+
+      function displayIpInfo(data) {
+        const detail = data.detail;
+
+        ipAddress.textContent = `Your IP: ${data.ip}`;
+        clearTable(locationTable);
+        clearTable(networkTable);
+
+        // Location data
+        addRow(locationTable, "Country", `${detail.country_name} (${detail.country_code})`);
+        addRow(locationTable, "Region", detail.region);
+        addRow(locationTable, "City", detail.city);
+        addRow(locationTable, "Postal", detail.postal);
+        addRow(locationTable, "Latitude", detail.latitude);
+        addRow(locationTable, "Longitude", detail.longitude);
+        addRow(locationTable, "Timezone", detail.timezone);
+
+        // Network data
+        addRow(networkTable, "ISP", detail.org);
+        addRow(networkTable, "ASN", detail.asn);
+        addRow(networkTable, "Connection Type", detail.connection_type || "Unknown");
+
+        // Map display
+        if (detail.latitude && detail.longitude) {
+          const lat = detail.latitude;
+          const lon = detail.longitude;
+          const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${lon - 0.05},${lat - 0.05},${lon + 0.05},${lat + 0.05}&layer=mapnik&marker=${lat},${lon}`;
+
+          mapContainer.innerHTML = `
+            <h3>Location on Map</h3>
+            <iframe width="100%" height="300" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="${mapUrl}" style="border-radius: 8px;"></iframe>
+            <p><small>${detail.city}, ${detail.region}, ${detail.country_name}</small></p>
+          `;
+        } else {
+          mapContainer.innerHTML = "<p>Map not available</p>";
+        }
+
+        ipDetail.style.display = "block";
+      }
+
+      function clearTable(table) {
+        while (table.rows.length > 1) {
+          table.deleteRow(1);
+        }
+      }
+
+      function addRow(table, prop, val) {
+        const row = table.insertRow();
+        row.insertCell(0).textContent = prop;
+        row.insertCell(1).textContent = val || "Unknown";
+      }
+    });
+  </script>
+</body>
+</html>
