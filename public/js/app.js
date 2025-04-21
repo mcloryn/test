@@ -10,7 +10,6 @@ async function fetchIpInfo() {
   const networkTable = document.getElementById("networkTable");
   const mapContainer = document.getElementById("mapContainer");
 
-  // Reset UI
   error.style.display = "none";
   detail.style.display = "none";
   loading.style.display = "block";
@@ -20,38 +19,59 @@ async function fetchIpInfo() {
     const res = await fetch("/api/ip-info");
     if (!res.ok) throw new Error("Failed to fetch IP info");
 
-    const data = await res.json();
+    const ipData = await res.json();
 
-    // ✅ Show IP address
-    ipAddress.innerText = `Your IP: ${data.ip}`;
+    // Default location dari IP
+    let latitude = ipData.location.latitude;
+    let longitude = ipData.location.longitude;
+    let source = "IP Geolocation";
 
-    // ✅ Fill location table
+    // Coba ambil lokasi dari browser (Geolocation API)
+    if (navigator.geolocation) {
+      try {
+        const geo = await new Promise((resolve, reject) =>
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 5000
+          })
+        );
+        latitude = geo.coords.latitude;
+        longitude = geo.coords.longitude;
+        source = "Browser Geolocation";
+      } catch (geoErr) {
+        console.warn("User denied location or error:", geoErr.message);
+      }
+    }
+
+    ipAddress.innerText = `Your IP: ${ipData.ip}`;
+
+    // Location info
     const locationFields = {
-      City: data.location.city,
-      Region: data.location.region,
-      Country: data.location.country,
-      Postal: data.location.postal,
-      Latitude: data.location.latitude,
-      Longitude: data.location.longitude,
+      City: ipData.location.city,
+      Region: ipData.location.region,
+      Country: ipData.location.country,
+      Postal: ipData.location.postal,
+      Latitude: latitude,
+      Longitude: longitude,
+      Source: source
     };
     locationTable.innerHTML = `<tr><th>Property</th><th>Value</th></tr>`;
     for (let key in locationFields) {
       locationTable.innerHTML += `<tr><td>${key}</td><td>${locationFields[key]}</td></tr>`;
     }
 
-    // ✅ Fill network table (data dari IP API bisa ditambah, misal ISP jika tersedia)
+    // Network info
     networkTable.innerHTML = `<tr><th>Property</th><th>Value</th></tr>`;
-    networkTable.innerHTML += `<tr><td>IP Address</td><td>${data.ip}</td></tr>`;
-    networkTable.innerHTML += `<tr><td>Timestamp</td><td>${data.timestamp}</td></tr>`;
+    networkTable.innerHTML += `<tr><td>IP Address</td><td>${ipData.ip}</td></tr>`;
+    networkTable.innerHTML += `<tr><td>Timestamp</td><td>${ipData.timestamp}</td></tr>`;
 
-    // ✅ Map (Google Maps iframe)
     mapContainer.innerHTML = `
       <iframe
         width="100%"
         height="300"
         frameborder="0"
         style="border:0; border-radius: 10px;"
-        src="https://maps.google.com/maps?q=${data.location.latitude},${data.location.longitude}&z=13&output=embed"
+        src="https://maps.google.com/maps?q=${latitude},${longitude}&z=13&output=embed"
         allowfullscreen>
       </iframe>
     `;
