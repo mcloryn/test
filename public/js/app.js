@@ -11,25 +11,16 @@ document.addEventListener("DOMContentLoaded", function () {
     getIpBtn.addEventListener("click", fetchIpInfo);
   
     async function fetchIpInfo() {
-      error.style.display = "none";
-      ipDetail.style.display = "none";
-      getIpBtn.disabled = true;
-      loading.style.display = "block";
-  
-      try {
-        const response = await fetch("/api/ip-info");
-        if (!response.ok) throw new Error("Network error");
-  
-        const data = await response.json();
-        displayIpInfo(data);
-      } catch (err) {
-        console.error(err);
-        error.style.display = "block";
-      } finally {
-        loading.style.display = "none";
-        getIpBtn.disabled = false;
+        try {
+          const res = await fetch("/api/ip-info");
+          if (!res.ok) throw new Error("Failed to fetch IP info");
+          const data = await res.json();
+          console.log("IP Info:", data);
+        } catch (error) {
+          console.error("Error:", error.message);
+        }
       }
-    }
+      
   
     function displayIpInfo(data) {
       const location = data.location || {};
