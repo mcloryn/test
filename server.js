@@ -16,7 +16,12 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // Nonaktifkan CSP saja, fitur lain tetap aktif
+  })
+);
+
 app.use(cors());
 app.use(express.json());
 app.use(morgan("combined"));
@@ -30,32 +35,29 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// Serve file statis jika diperlukan
+// Serve file statis
 app.use(express.static(path.join(__dirname, "public"), { maxAge: "1h" }));
 
-// ✅ Endpoint untuk mendapatkan IP info user secara otomatis
+// ✅ Endpoint: Info IP termasuk fallback untuk localhost
 app.get("/api/ip-info", async (req, res) => {
   let ip = req.headers["x-forwarded-for"]?.split(",")[0].trim() ||
            req.headers["x-real-ip"] ||
            req.socket.remoteAddress;
 
-  // Cek jika IP adalah lokal (localhost)
-  if (ip === "127.0.0.1" || ip === "::1") {
-    return res.status(400).json({
-      error: "Tidak dapat mendeteksi IP publik pada koneksi lokal"
-    });
-  }
+  // Fallback ke IP publik sendiri jika localhost
+  const isLocalhost = ip === "127.0.0.1" || ip === "::1";
+  const targetIP = isLocalhost ? "" : ip; // "" artinya API akan deteksi otomatis IP client
+
+  const apiUrl = `https://ipapi.co/${targetIP}/json/`;
 
   try {
-    const apiUrl = `https://ipapi.co/${ip}/json/`;
-
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
     const response = await fetch(apiUrl, {
       signal: controller.signal,
       headers: {
-        "User -Agent": "IPInfoApp/1.0",
+        "User-Agent": "IPInfoApp/1.0",
         "Accept": "application/json"
       }
     });
@@ -73,7 +75,7 @@ app.get("/api/ip-info", async (req, res) => {
     }
 
     res.json({
-      ip: ip,
+      ip: isLocalhost ? "localhost (detected via external)" : ip,
       timestamp: new Date().toISOString(),
       location: {
         city: data.city,
